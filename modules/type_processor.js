@@ -1,17 +1,26 @@
 module.exports = {
 
-    processItem : function(item) {
+    processItems : function(items) {
 
-        item.type = "unknown";
-
-        _payment(item);
-        _transfer(item);
-        _refund(item);
-        _charge(item);
+        items.forEach(item => {
+            _processItem(item);
+        });
 
     }
 
 };
+
+
+function _processItem(item) {
+
+    item.type = "unknown";
+
+    _payment(item);
+    _transfer(item);
+    _refund(item);
+    _charge(item);
+
+}
 
 function _refund(item) {
 

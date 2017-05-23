@@ -1,18 +1,30 @@
-const vendors = require('../../money_data/vendors.json');
+const VendorMapper = require('./vendor_mapper.js');
 
 module.exports = function (db) {
 
     this.db = db;
+    this.vendors = null;
 
-    this.processItem = function(item) {
+    this.vendorMapper = new VendorMapper(this.db);
 
-        item.budget = "unknown";
+    this.processItems = function(items)
+    {
 
-        _vendorDefaultBudget(item);
+        return new Promise( (resolve, reject) => {
 
-        _default(item);
+            this.vendorMapper.getAll().then(vendors => {
 
-    },
+                items.forEach(item => {
+                    _processItem(vendors, item);
+                });
+
+                resolve(items);
+
+            });
+
+        });
+
+    }
 
     this.report = function (items) {
 
@@ -25,6 +37,7 @@ module.exports = function (db) {
                 budgets.forEach(budget => {
 
                     report.push({
+                        id : budget._id,
                         name : budget.name,
                         expected : budget.amount,
                         actual: 0
@@ -34,10 +47,10 @@ module.exports = function (db) {
 
                 items.forEach(item => {
 
-                    if (item.budget == "unknown") return;
+                    if (item.budgetId == null) return;
 
                     var currentReportItem = report.find(reportItem => {
-                        return reportItem.name === item.budget;
+                        return reportItem.id.equals(item.budgetId);
                     });
 
                     currentReportItem.actual += item.debit;
@@ -54,30 +67,36 @@ module.exports = function (db) {
 
 };
 
+function _processItem(vendors, item) {
+
+    item.budgetId = null;
+
+    _vendorDefaultBudget(vendors, item);
+
+    _default(item);
+
+}
 
 function _default(item)
 {
-    if (item.budget !== "unknown") return;
+    if (item.budgetId !== null) return;
     if (item.credit > 0) return;
     if (item.debit === 0) return;
     if (item.type !== "charge") return;
 
 
-    item.budget = "general";
+    item.budgetId = "592253d826bad827247e2baa";
 }
 
-function _vendorDefaultBudget(item)
+function _vendorDefaultBudget(vendors, item)
 {
-    if (item.budget !== "unknown") return;
-    if (item.vendor === "unknown") return;
-
+    if (item.budgetId !== null) return;
+    if (item.vendorId === null) return;
 
     var currentVendor = vendors.find(vendor => {
-        return vendor.id == item.vendor;
+        return vendor._id.equals(item.vendorId);
     });
 
-    if (currentVendor.defaultBudget === undefined) return;
-
-    item.budget = currentVendor.defaultBudget;
+    item.budgetId = currentVendor.defaultBudgetId;
 
 }

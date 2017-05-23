@@ -1,7 +1,7 @@
 const express = require('express');
 const csvLoader = require('./csv_loader.js');
 const typeProcessor = require('./type_processor.js');
-const vendorProcessor = require('./vendor_processor.js');
+const VendorProcessor = require('./vendor_processor.js');
 const BudgetProcessor = require('./budget_processor.js');
 
 var app = express();
@@ -41,25 +41,20 @@ app.get('/report', function (req, res) {
     csvLoader.loadFromDirectory('../money_data').then(items => {
 
         var budgetProcessor = new BudgetProcessor(app.locals.db);
-    
-        console.log('csv items: ' + items.length);
+        var vendorProcessor = new VendorProcessor(app.locals.db);
 
+        typeProcessor.processItems(items);
 
-        items.forEach(transaction => {
+        vendorProcessor.processItems(items).then(items => {
 
-            typeProcessor.processItem(transaction);
-            vendorProcessor.processItem(transaction);
-            budgetProcessor.processItem(transaction);
+            budgetProcessor.processItems(items).then (items => {
 
-            if (transaction.vendor == "unknown")
-            {
-                console.log(transaction);
-            }
+                budgetProcessor.report(items).then(budgetReport => {
+                    res.send(budgetReport);
+                });
 
-        });
-
-        budgetProcessor.report(items).then(budgetReport => {
-            res.send(budgetReport);
+            });
+            
         });
     
     });
